@@ -10,7 +10,15 @@ const User = require('./models/user');
 const app = express();
 app.use(bodyParsor.json());
 
-const events = [];
+const user = userId => {
+  return User.findById(userId)
+  .then(user => {
+    return { ...user._doc, _di: user.id}
+  })
+  .catch(err => {
+    throw err;
+  })
+}
 
 app.use('/graphql', graphqlHTTP({
   schema: buildSchema(`
@@ -20,12 +28,14 @@ app.use('/graphql', graphqlHTTP({
     description: String!
     price: Float!
     date: String!
+    creator: User!
   }
 
   type User {
     _id: ID!
     email: String!
     password: String
+    createdEvents: [Event!]
   }
 
   input EventInput {
@@ -56,7 +66,10 @@ app.use('/graphql', graphqlHTTP({
   `),
   rootValue:{
     events: () => {
-    return  Event.find().then((events) => {
+    return  Event
+    .find()
+    .populate('creator')
+    .then((events) => {
       console.log('Event List', events);
       return events;
       }).catch(e => {
